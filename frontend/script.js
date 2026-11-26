@@ -525,12 +525,26 @@
       }
 
       // Store in AppState
-      AppState.originalTreeData = result.tree;
+      const treeObj = result.tree || result.tree_json;
+      let pre = [];
+      let ino = [];
+      let post = [];
+      if (result.traversals) {
+        pre = Array.isArray(result.traversals.preorder) ? result.traversals.preorder : (result.traversals.preorder || '').split(/\s+/).filter(Boolean);
+        ino = Array.isArray(result.traversals.inorder) ? result.traversals.inorder : (result.traversals.inorder || '').split(/\s+/).filter(Boolean);
+        post = Array.isArray(result.traversals.postorder) ? result.traversals.postorder : (result.traversals.postorder || '').split(/\s+/).filter(Boolean);
+      } else {
+        if (typeof result.preorder === 'string') pre = result.preorder.split(/\s+/).filter(Boolean);
+        if (typeof result.inorder === 'string') ino = result.inorder.split(/\s+/).filter(Boolean);
+        if (typeof result.postorder === 'string') post = result.postorder.split(/\s+/).filter(Boolean);
+      }
+
+      AppState.originalTreeData = treeObj;
       AppState.originalTokens = rawTokens;
       AppState.originalSerialized = result.serialized || rawTokens;
-      AppState.originalTraversals = result.traversals || { preorder: [], inorder: [], postorder: [] };
+      AppState.originalTraversals = { preorder: pre, inorder: ino, postorder: post };
       AppState.originalStats = result.stats || {
-        nodes: (result.traversals && result.traversals.preorder) ? result.traversals.preorder.length : 0,
+        nodes: pre.length || result.node_count || 0,
         height: result.height || 0,
         nulls: rawTokens.split(/\s+/).filter(t => t === '#').length
       };
@@ -592,11 +606,12 @@
     function prepareNode(n, depth = 0, isGhost = false, parentId = null, branchType = null) {
       if (!n) return null;
       const id = ++nodeIdCounter;
+      const val = n.val !== undefined ? n.val : n.name;
       const wrapped = {
         id,
-        val: n.val,
+        val: val || '#',
         depth,
-        isGhost,
+        isGhost: isGhost || val === '#' || n.isEmpty === true,
         parentId,
         branchType,
         x: 0,
@@ -606,15 +621,22 @@
         raw: n
       };
 
-      if (!isGhost) {
-        if (n.left) {
-          wrapped.left = prepareNode(n.left, depth + 1, false, id, 'left');
+      if (!wrapped.isGhost) {
+        let leftChild = n.left;
+        let rightChild = n.right;
+        if (n.children && Array.isArray(n.children)) {
+          if (n.children[0] && !n.children[0].isEmpty && n.children[0].name !== '#') leftChild = n.children[0];
+          if (n.children[1] && !n.children[1].isEmpty && n.children[1].name !== '#') rightChild = n.children[1];
+        }
+
+        if (leftChild) {
+          wrapped.left = prepareNode(leftChild, depth + 1, false, id, 'left');
         } else if (includeNulls) {
           wrapped.left = prepareNode({ val: '#' }, depth + 1, true, id, 'left');
         }
 
-        if (n.right) {
-          wrapped.right = prepareNode(n.right, depth + 1, false, id, 'right');
+        if (rightChild) {
+          wrapped.right = prepareNode(rightChild, depth + 1, false, id, 'right');
         } else if (includeNulls) {
           wrapped.right = prepareNode({ val: '#' }, depth + 1, true, id, 'right');
         }
@@ -1167,12 +1189,20 @@
     UI.restoreSpinner.classList.remove('hidden');
 
     try {
-      const endpoint = `${AppState.apiBaseUrl}/api/tree/restore`;
-      const response = await fetch(endpoint, {
+      let endpoint = `${AppState.apiBaseUrl}/api/tree/restore`;
+      let response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ archive_text: archiveText })
       });
+      if (response.status === 404) {
+        endpoint = `${AppState.apiBaseUrl}/api/archive/restore`;
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ archive_text: archiveText })
+        });
+      }
 
       const result = await response.json();
 
@@ -1181,11 +1211,22 @@
       }
 
       // Store in AppState
-      AppState.restoredTreeData = result.tree;
+      const treeObj = result.tree || result.tree_json;
+      let pre = [];
+      let ino = [];
+      if (result.traversals) {
+        pre = Array.isArray(result.traversals.preorder) ? result.traversals.preorder : (result.traversals.preorder || '').split(/\s+/).filter(Boolean);
+        ino = Array.isArray(result.traversals.inorder) ? result.traversals.inorder : (result.traversals.inorder || '').split(/\s+/).filter(Boolean);
+      } else {
+        if (typeof result.preorder === 'string') pre = result.preorder.split(/\s+/).filter(Boolean);
+        if (typeof result.inorder === 'string') ino = result.inorder.split(/\s+/).filter(Boolean);
+      }
+
+      AppState.restoredTreeData = treeObj;
       AppState.restoredTokens = archiveText;
-      AppState.restoredTraversals = result.traversals || { preorder: [], inorder: [] };
+      AppState.restoredTraversals = { preorder: pre, inorder: ino };
       AppState.restoredStats = result.stats || {
-        nodes: (result.traversals && result.traversals.preorder) ? result.traversals.preorder.length : 0,
+        nodes: pre.length || result.node_count || 0,
         height: result.height || 0,
         nulls: archiveText.split(/\s+/).filter(t => t === '#').length
       };
@@ -1333,12 +1374,20 @@
     UI.damageSpinner.classList.remove('hidden');
 
     try {
-      const endpoint = `${AppState.apiBaseUrl}/api/tree/validate`;
-      const response = await fetch(endpoint, {
+      let endpoint = `${AppState.apiBaseUrl}/api/tree/validate`;
+      let response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ archive_text: brokenTokens })
       });
+      if (response.status === 404) {
+        endpoint = `${AppState.apiBaseUrl}/api/archive/validate`;
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ archive_text: brokenTokens })
+        });
+      }
 
       const result = await response.json();
 

@@ -418,6 +418,8 @@ def serve_index():
 
 @app.route("/<path:path>")
 def serve_static(path):
+    if path.startswith("api/"):
+        return jsonify({"success": False, "error": "API endpoint not found", "error_code": "NOT_FOUND"}), 404
     file_path = FRONTEND_DIR / path
     if file_path.exists():
         return send_from_directory(str(FRONTEND_DIR), path)
@@ -524,6 +526,7 @@ def download_archive(filename):
 
 
 @app.route("/api/archive/restore", methods=["POST"])
+@app.route("/api/tree/restore", methods=["POST"])
 def restore_archive():
     """5. Restore archive endpoint."""
     if not request.is_json:
@@ -542,6 +545,7 @@ def restore_archive():
 
 
 @app.route("/api/archive/validate", methods=["POST"])
+@app.route("/api/tree/validate", methods=["POST"])
 def validate_archive():
     """6. Validate archive endpoint."""
     if not request.is_json:
