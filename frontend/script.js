@@ -20,6 +20,9 @@
     backendOnline: false,
     soundEnabled: true,
     showGhostNulls: true,
+    atmosphereEnabled: true,
+    treeOrientation: 'vertical', // 'vertical' or 'horizontal'
+    highlightedNodeId: null,
 
     // Active Original Tree Data (returned by backend)
     originalTreeData: null,
@@ -86,6 +89,15 @@
     },
     chimeStep() {
       this.playTone(440, 'triangle', 0.08, 0.03);
+    },
+    playHarmonic(depth = 0) {
+      const scale = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99, 1046.50];
+      const freq = scale[depth % scale.length];
+      this.playTone(freq, 'sine', 0.28, 0.07);
+    },
+    chimePulse() {
+      this.playTone(392.00, 'triangle', 0.35, 0.05);
+      setTimeout(() => this.playTone(523.25, 'sine', 0.45, 0.05), 80);
     }
   };
 
@@ -99,6 +111,9 @@
     toggleSoundBtn: document.getElementById('toggleSoundBtn'),
     soundIcon: document.getElementById('soundIcon'),
     soundLabel: document.getElementById('soundLabel'),
+    toggleAtmosphereBtn: document.getElementById('toggleAtmosphereBtn'),
+    atmoLabel: document.getElementById('atmoLabel'),
+    ambientCanvas: document.getElementById('ambientCanvas'),
 
     // Section 1: Ingestion Desk
     treeTokensInput: document.getElementById('treeTokensInput'),
@@ -106,6 +121,8 @@
     clearInputBtn: document.getElementById('clearInputBtn'),
     inputFeedback: document.getElementById('inputValidationFeedback'),
     feedbackText: document.getElementById('feedbackText'),
+    treeBalanceGauge: document.getElementById('treeBalanceGauge'),
+    liveTokenChips: document.getElementById('liveTokenChips'),
     loadTreeBtn: document.getElementById('loadTreeBtn'),
     loadTreeSpinner: document.getElementById('loadTreeSpinner'),
     resetTreeBtn: document.getElementById('resetTreeBtn'),
@@ -125,6 +142,9 @@
     inspSize: document.getElementById('inspSize'),
     inspLeft: document.getElementById('inspLeft'),
     inspRight: document.getElementById('inspRight'),
+    toggleOrientationBtn: document.getElementById('toggleOrientationBtn'),
+    orientationLabel: document.getElementById('orientationLabel'),
+    pulseTreeBtn: document.getElementById('pulseTreeBtn'),
     zoomInBtn: document.getElementById('zoomInBtn'),
     zoomOutBtn: document.getElementById('zoomOutBtn'),
     resetZoomBtn: document.getElementById('resetZoomBtn'),
@@ -210,6 +230,7 @@
 
     // Section 7: Damaged Archive Chamber
     damagedArchiveInput: document.getElementById('damagedArchiveInput'),
+    laserScanner: document.getElementById('laserScanner'),
     defectButtons: document.querySelectorAll('.btn-defect'),
     testDamagedBtn: document.getElementById('testDamagedBtn'),
     damageSpinner: document.getElementById('damageSpinner'),
@@ -325,6 +346,113 @@
     }
   }
 
+  /* ================= LIVE PARSER RIBBON & AMBIENT ENGINE ================= */
+  function renderLiveTokenRibbon(tokens, nodes, nulls, expectedNulls) {
+    if (!UI.liveTokenChips) return;
+    UI.liveTokenChips.innerHTML = '';
+    if (tokens.length === 0) {
+      if (UI.treeBalanceGauge) {
+        UI.treeBalanceGauge.textContent = 'Balance Invariant: 0 / 0';
+        UI.treeBalanceGauge.className = 'balance-gauge';
+      }
+      return;
+    }
+
+    if (UI.treeBalanceGauge) {
+      const isBalanced = (nodes > 0 && nulls === expectedNulls) || (tokens.length === 1 && tokens[0] === '#');
+      UI.treeBalanceGauge.textContent = `Nulls: ${nulls} / ${expectedNulls} expected (${nodes} Nodes)`;
+      UI.treeBalanceGauge.className = isBalanced ? 'balance-gauge balanced' : 'balance-gauge unbalanced';
+    }
+
+    tokens.forEach((t, i) => {
+      const chip = document.createElement('span');
+      chip.className = `token-bubble ${t === '#' ? 'null-bubble' : 'node-bubble'}`;
+      chip.innerHTML = `<span class="token-bubble-idx">#${i + 1}</span> ${t}`;
+      UI.liveTokenChips.appendChild(chip);
+    });
+  }
+
+  function launchGoldenConfetti() {
+    const colors = ['#c59b27', '#d4af37', '#e5c07b', '#386641', '#f3e9cf'];
+    for (let i = 0; i < 35; i++) {
+      const el = document.createElement('div');
+      el.className = 'confetti-particle';
+      el.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+      el.style.left = '50vw';
+      el.style.top = '40vh';
+      const dx = (Math.random() - 0.5) * 500 + 'px';
+      const dy = (Math.random() - 0.5) * 450 - 80 + 'px';
+      el.style.setProperty('--dx', dx);
+      el.style.setProperty('--dy', dy);
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 1800);
+    }
+  }
+
+  const AmbientAtmosphere = {
+    canvas: null,
+    ctx: null,
+    particles: [],
+    animId: null,
+    init() {
+      this.canvas = UI.ambientCanvas;
+      if (!this.canvas) return;
+      this.ctx = this.canvas.getContext('2d');
+      this.resize();
+      window.addEventListener('resize', () => this.resize());
+      this.createParticles();
+      this.loop();
+    },
+    resize() {
+      if (!this.canvas) return;
+      this.canvas.width = window.innerWidth;
+      this.canvas.height = window.innerHeight;
+    },
+    createParticles() {
+      this.particles = [];
+      const count = Math.min(Math.floor(window.innerWidth / 25), 45);
+      for (let i = 0; i < count; i++) {
+        this.particles.push({
+          x: Math.random() * this.canvas.width,
+          y: Math.random() * this.canvas.height,
+          r: Math.random() * 2 + 0.8,
+          vx: (Math.random() - 0.5) * 0.4,
+          vy: (Math.random() - 0.5) * 0.3 - 0.15,
+          alpha: Math.random() * 0.5 + 0.2,
+          decay: Math.random() * 0.005 + 0.002
+        });
+      }
+    },
+    loop() {
+      if (!AppState.atmosphereEnabled) {
+        if (this.ctx && this.canvas) this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.animId = requestAnimationFrame(() => this.loop());
+        return;
+      }
+      const ctx = this.ctx;
+      if (!ctx) return;
+      ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      for (let p of this.particles) {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha += p.decay;
+        if (p.alpha > 0.7 || p.alpha < 0.15) p.decay = -p.decay;
+        if (p.x < 0) p.x = this.canvas.width;
+        if (p.x > this.canvas.width) p.x = 0;
+        if (p.y < 0) p.y = this.canvas.height;
+        if (p.y > this.canvas.height) p.y = 0;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(197, 155, 39, ${p.alpha})`;
+        ctx.shadowBlur = 4;
+        ctx.shadowColor = 'rgba(212, 175, 55, 0.4)';
+        ctx.fill();
+      }
+      this.animId = requestAnimationFrame(() => this.loop());
+    }
+  };
+
   /* ================= TOKEN INPUT LIVE ANALYSIS ================= */
   function analyzeTokenInput() {
     const raw = UI.treeTokensInput.value.trim();
@@ -332,6 +460,7 @@
       UI.tokenCounterBadge.textContent = 'Tokens: 0 | Nodes: 0 | Missing (#): 0';
       UI.feedbackText.textContent = 'Please enter space-separated preorder tokens.';
       UI.inputFeedback.querySelector('.feedback-indicator').className = 'feedback-indicator';
+      renderLiveTokenRibbon([], 0, 0, 0);
       return { tokens: [], nodes: 0, nulls: 0, isValid: false };
     }
 
@@ -364,6 +493,7 @@
     }
 
     UI.feedbackText.textContent = message;
+    renderLiveTokenRibbon(tokens, nodes, nulls, expectedNulls);
     return { tokens, nodes, nulls, isValid: isValidCandidate };
   }
 
@@ -496,18 +626,24 @@
     const root = prepareNode(rootNode);
 
     // In-order placement to avoid node collisions
-    let currentX = 50;
-    const xSpacing = 58;
+    let currentPos = 50;
+    const spacing = 58;
 
-    function assignXCoordinates(node) {
+    function assignCoordinates(node) {
       if (!node) return;
-      if (node.left) assignXCoordinates(node.left);
-      node.x = currentX;
-      currentX += xSpacing;
-      if (node.right) assignXCoordinates(node.right);
+      if (node.left) assignCoordinates(node.left);
+      if (AppState.treeOrientation === 'horizontal') {
+        node.x = node.depth * 130 + 60;
+        node.y = currentPos;
+      } else {
+        node.x = currentPos;
+        node.y = node.depth * 80 + 50;
+      }
+      currentPos += spacing;
+      if (node.right) assignCoordinates(node.right);
     }
 
-    assignXCoordinates(root);
+    assignCoordinates(root);
 
     // Flatten into node & link arrays
     function collectElements(node) {
@@ -529,6 +665,26 @@
     const maxY = Math.max(...nodes.map(n => n.y), 320) + 70;
 
     return { root, nodes, links, width: maxX, height: maxY };
+  }
+
+  function highlightLineagePath(startNode, layout) {
+    document.querySelectorAll('#svgLinksLayer .tree-link-path').forEach(p => p.classList.remove('path-active'));
+    document.querySelectorAll('#svgNodesLayer .tree-node-group').forEach(g => g.classList.remove('lineage-highlight'));
+
+    let curr = startNode;
+    let depth = curr.depth;
+    while (curr) {
+      const group = document.querySelector(`#svgNodesLayer .tree-node-group[data-node-id="${curr.id}"]`);
+      if (group) group.classList.add('lineage-highlight');
+      if (curr.parentId) {
+        const link = document.getElementById(`link-orig-${curr.parentId}-${curr.id}`);
+        if (link) link.classList.add('path-active');
+        curr = layout.nodes.find(n => n.id === curr.parentId);
+      } else {
+        break;
+      }
+    }
+    SoundEngine.playHarmonic(depth);
   }
 
   /**
@@ -557,8 +713,14 @@
       const y2 = link.to.y;
 
       // Smooth cubic bezier curve connecting lineage generations
-      const midY = (y1 + y2) / 2;
-      const d = `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
+      let d;
+      if (AppState.treeOrientation === 'horizontal') {
+        const midX = (x1 + x2) / 2;
+        d = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
+      } else {
+        const midY = (y1 + y2) / 2;
+        d = `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
+      }
 
       path.setAttribute('d', d);
       path.setAttribute('class', link.isGhost ? 'tree-link-path ghost-link' : 'tree-link-path');
@@ -607,7 +769,7 @@
           hideNodeInspector();
         });
         group.addEventListener('click', () => {
-          SoundEngine.chimeStep();
+          highlightLineagePath(node, layout);
           showNodeInspector(node, null, true);
         });
       }
@@ -1140,6 +1302,12 @@
       UI.verdictKicker.textContent = 'VERIFICATION STATUS: 100% FAITHFUL';
       UI.verdictHeadline.textContent = 'SUCCESS — STRUCTURE PRESERVED';
       UI.verdictSubtext.textContent = 'Flawless Round-Trip Verification: All preorder, inorder, and hierarchical structural invariants are 100% identical.';
+      if (UI.waxSeal) {
+        UI.waxSeal.classList.remove('stamp-active');
+        void UI.waxSeal.offsetWidth;
+        UI.waxSeal.classList.add('stamp-active');
+      }
+      launchGoldenConfetti();
       showToast('Audit Passed', 'SUCCESS: Tree structure preserved perfectly through archive and recovery.', 'success');
       SoundEngine.chimeSuccess();
     } else {
@@ -1160,6 +1328,7 @@
       return;
     }
 
+    if (UI.laserScanner) UI.laserScanner.classList.remove('hidden');
     UI.testDamagedBtn.disabled = true;
     UI.damageSpinner.classList.remove('hidden');
 
@@ -1212,6 +1381,7 @@
       showToast('Defect Captured', 'Backend rejected the malformed archival stream.', 'error');
       SoundEngine.chimeError();
     } finally {
+      if (UI.laserScanner) UI.laserScanner.classList.add('hidden');
       UI.testDamagedBtn.disabled = false;
       UI.damageSpinner.classList.add('hidden');
     }
@@ -1270,6 +1440,39 @@
       UI.toggleSoundBtn.classList.toggle('active', AppState.soundEnabled);
       showToast('Archival Audio', AppState.soundEnabled ? 'Audio chimes enabled.' : 'Audio muted.', 'info');
     });
+
+    if (UI.toggleAtmosphereBtn) {
+      UI.toggleAtmosphereBtn.addEventListener('click', () => {
+        AppState.atmosphereEnabled = !AppState.atmosphereEnabled;
+        if (UI.atmoLabel) UI.atmoLabel.textContent = AppState.atmosphereEnabled ? 'Sparks On' : 'Sparks Off';
+        UI.toggleAtmosphereBtn.classList.toggle('active', AppState.atmosphereEnabled);
+        showToast('Atmosphere', AppState.atmosphereEnabled ? 'Golden embers enabled.' : 'Atmosphere muted.', 'info');
+      });
+    }
+
+    if (UI.toggleOrientationBtn) {
+      UI.toggleOrientationBtn.addEventListener('click', () => {
+        AppState.treeOrientation = (AppState.treeOrientation === 'vertical' ? 'horizontal' : 'vertical');
+        if (UI.orientationLabel) {
+          UI.orientationLabel.textContent = AppState.treeOrientation === 'vertical' ? 'Vertical' : 'Horizontal';
+        }
+        if (AppState.originalTreeData) {
+          renderSvgTree(AppState.originalTreeData, UI.svgLinksLayer, UI.svgNodesLayer, UI.canvasEmptyState, AppState.showGhostNulls, 'orig');
+        }
+        SoundEngine.chimeStep();
+      });
+    }
+
+    if (UI.pulseTreeBtn) {
+      UI.pulseTreeBtn.addEventListener('click', () => {
+        const links = document.querySelectorAll('#svgLinksLayer .tree-link-path');
+        links.forEach(l => l.classList.add('path-active'));
+        SoundEngine.chimePulse();
+        setTimeout(() => {
+          links.forEach(l => l.classList.remove('path-active'));
+        }, 1800);
+      });
+    }
 
     // Ingestion Desk Actions
     UI.treeTokensInput.addEventListener('input', analyzeTokenInput);
@@ -1366,6 +1569,7 @@
     initializeEventListeners();
     analyzeTokenInput();
     checkBackendHealth(false);
+    AmbientAtmosphere.init();
 
     // Automatically attempt initial tree load if backend is already available
     setTimeout(() => {
