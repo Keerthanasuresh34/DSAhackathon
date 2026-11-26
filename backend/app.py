@@ -1,333 +1,342 @@
-"""
-The Museum's Vanishing Family Trees — Flask Backend API Server
-Developed in coordination with Member 4 (Backend API) and Member 3 (Frontend UI)
-
-Provides REST endpoints for:
-- Health check
-- Preorder binary tree construction & verification
-- Traversals (Preorder, Inorder, Postorder)
-- Lossless serialization & archival file generation
-- Recovery from archived manuscript
-- Validation and rejection diagnostics for damaged/truncated streams
-- Structural comparison & round-trip verification
-- Static hosting of frontend dashboard
-"""
-
 import os
-from flask import Flask, request, jsonify, send_from_directory
+import sys
+import json
+import subprocess
+from pathlib import Path
+from flask import Flask, request, jsonify, send_file, send_from_directory
+from flask_cors import CORS
 
-app = Flask(__name__, static_folder="../frontend")
+BASE_DIR = Path(__file__).resolve().parent
+WORKSPACE_DIR = BASE_DIR.parent
+FRONTEND_DIR = WORKSPACE_DIR / "frontend"
+EXPORTS_DIR = BASE_DIR / "exports"
+EXPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
-# Enable CORS for local testing from any origin or port
-@app.after_request
-def add_cors_headers(response):
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-    return response
+# Determine C engine binary path
+if os.name == "nt":
+    ENGINE_EXE = BASE_DIR / "tree_engine.exe"
+else:
+    ENGINE_EXE = BASE_DIR / "tree_engine"
 
-# Binary Tree Node Structure
-class TreeNode:
-    def __init__(self, val):
-        self.val = val
-        self.left = None
-        self.right = None
+app = Flask(__name__, static_folder=str(FRONTEND_DIR), static_url_path="")
+CORS(app)
 
-    def to_dict(self):
-        return {
-            "val": self.val,
-            "left": self.left.to_dict() if self.left else None,
-            "right": self.right.to_dict() if self.right else None
-        }
 
-def build_tree_from_tokens(tokens):
-    """
-    Constructs a binary tree from preorder tokens with '#' representing NULL.
-    Strictly verifies that:
-    1. Stream contains enough tokens for complete reconstruction.
-    2. Stream has no extraneous dangling tokens after full tree reconstruction.
-    """
-    if not tokens:
-        raise ValueError("Empty manuscript: No tokens provided.")
+def ensure_engine_compiled():
+    """Ensure the C tree engine binary is compiled and available."""
+    if ENGINE_EXE.exists():
+        return True, "Engine executable exists."
 
-    index = 0
-
-    def helper(parent_val=None, branch=None):
-        nonlocal index
-        if index >= len(tokens):
-            err_msg = (
-                f"Premature stream termination: Node '{parent_val}' expects {branch} child, "
-                f"but token stream ended abruptly."
-                if parent_val else "Premature stream termination: Expected root token."
-            )
-            raise ValueError(err_msg)
-
-        tok = tokens[index]
-        index += 1
-
-        if tok == "#":
-            return None
-
-        # Disallow unrecognized invalid symbol glyphs
-        if any(c in tok for c in ["%", "^", "@", "$", "*", "!", "&"]):
-            raise ValueError(f"Corrupted heraldic glyph '{tok}' is not a recognized lineage token.")
-
-        node = TreeNode(tok)
-        node.left = helper(tok, "left")
-        node.right = helper(tok, "right")
-        return node
-
-    root = helper()
-
-    # Check for excess unused tokens
-    if index < len(tokens):
-        extra = " ".join(tokens[index:])
-        raise ValueError(
-            f"Excess tokens detected: Tree structure completed, but dangling tokens remain: '{extra}'."
+    # Try building with make or gcc
+    try:
+        # Check if make is available
+        res = subprocess.run(
+            ["make", "-C", str(BASE_DIR)],
+            capture_output=True,
+            text=True,
+            timeout=20
         )
+        if res.returncode == 0 and ENGINE_EXE.exists():
+            return True, "Compiled engine via Makefile."
+    except Exception:
+        pass
 
-    return root
+    # Fallback direct gcc compilation
+    try:
+        sources = [str(BASE_DIR / "tree.c"), str(BASE_DIR / "archive.c"), str(BASE_DIR / "main.c")]
+        target = str(ENGINE_EXE)
+        gcc_cmd = ["gcc", "-Wall", "-Wextra", "-std=c11", "-O2", "-o", target] + sources
+        res = subprocess.run(gcc_cmd, capture_output=True, text=True, timeout=20)
+        if res.returncode == 0 and ENGINE_EXE.exists():
+            return True, "Compiled engine via gcc fallback."
+    except Exception as e:
+        return False, f"Failed to compile C engine: {str(e)}"
 
-def get_preorder(root):
-    res = []
-    def traverse(n):
-        if not n:
-            return
-        res.append(n.val)
-        traverse(n.left)
-        traverse(n.right)
-    traverse(root)
-    return res
+    return False, "C engine binary not found and compilation failed."
 
-def get_inorder(root):
-    res = []
-    def traverse(n):
-        if not n:
-            return
-        traverse(n.left)
-        res.append(n.val)
-        traverse(n.right)
-    traverse(root)
-    return res
 
-def get_postorder(root):
-    res = []
-    def traverse(n):
-        if not n:
-            return
-        traverse(n.left)
-        traverse(n.right)
-        res.append(n.val)
-    traverse(root)
-    return res
+def call_c_engine(args, timeout_sec=10):
+    """
+    Subprocess execution wrapper for the C binary engine.
+    Returns (success_bool, parsed_json_or_error_dict, status_code).
+    """
+    if not ENGINE_EXE.exists():
+        ok, msg = ensure_engine_compiled()
+        if not ok:
+            return False, {
+                "success": False,
+                "error_code": "ENGINE_UNAVAILABLE",
+                "error": f"C engine binary is unavailable: {msg}"
+            }, 503
 
-def get_tree_height(root):
-    if not root:
-        return 0
-    return 1 + max(get_tree_height(root.left), get_tree_height(root.right))
+    cmd = [str(ENGINE_EXE)] + args
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout_sec,
+            cwd=str(BASE_DIR)
+        )
+    except subprocess.TimeoutExpired:
+        return False, {
+            "success": False,
+            "error_code": "PROCESS_TIMEOUT",
+            "error": "The backend C engine timed out while processing request."
+        }, 504
+    except Exception as e:
+        return False, {
+            "success": False,
+            "error_code": "PROCESS_FAILURE",
+            "error": f"Failed to execute backend process: {str(e)}"
+        }, 500
 
-def serialize_tree(root):
-    tokens = []
-    def traverse(n):
-        if not n:
-            tokens.append("#")
-            return
-        tokens.append(str(n.val))
-        traverse(n.left)
-        traverse(n.right)
-    traverse(root)
-    return " ".join(tokens)
+    stdout = proc.stdout.strip()
+    stderr = proc.stderr.strip()
 
-# ================= API ENDPOINTS =================
+    if not stdout:
+        return False, {
+            "success": False,
+            "error_code": "EMPTY_ENGINE_OUTPUT",
+            "error": stderr or "C engine returned no output."
+        }, 500
 
-@app.route("/", methods=["GET"])
+    try:
+        data = json.loads(stdout)
+        if isinstance(data, dict) and data.get("success") is False:
+            return False, data, 400
+        return True, data, 200
+    except json.JSONDecodeError:
+        return False, {
+            "success": False,
+            "error_code": "INVALID_JSON_FROM_ENGINE",
+            "error": "Failed to parse JSON response from C engine.",
+            "raw_output": stdout
+        }, 500
+
+
+# ---------------------------------------------------------
+# Static Frontend Serving
+# ---------------------------------------------------------
+@app.route("/")
 def serve_index():
-    return send_from_directory("../frontend", "index.html")
+    return send_from_directory(str(FRONTEND_DIR), "index.html")
 
-@app.route("/<path:path>", methods=["GET"])
+
+@app.route("/<path:path>")
 def serve_static(path):
-    return send_from_directory("../frontend", path)
+    file_path = FRONTEND_DIR / path
+    if file_path.exists():
+        return send_from_directory(str(FRONTEND_DIR), path)
+    return send_from_directory(str(FRONTEND_DIR), "index.html")
+
+
+# ---------------------------------------------------------
+# API Endpoints
+# ---------------------------------------------------------
 
 @app.route("/api/health", methods=["GET"])
 def health_check():
+    """1. Health check endpoint."""
+    ok, data, code = call_c_engine(["--health"])
+    if not ok:
+        return jsonify({
+            "status": "degraded",
+            "flask_backend": "online",
+            "c_engine": "error",
+            "details": data
+        }), code
+
     return jsonify({
-        "status": "ok",
-        "backend": "C-BinaryTree-Engine",
-        "version": "1.0.0",
-        "institution": "Museum Archives & Lineage Conservancy"
-    })
+        "status": "healthy",
+        "flask_backend": "online",
+        "c_engine": data
+    }), 200
 
-@app.route("/api/tree/create", methods=["POST", "OPTIONS"])
+
+@app.route("/api/tree/create", methods=["POST"])
 def create_tree():
-    if request.method == "OPTIONS":
-        return "", 200
+    """
+    2. Create tree endpoint.
+    Input: {"tokens": "A B # D # # C # #"}
+    """
+    if not request.is_json:
+        return jsonify({"success": False, "error_code": "INVALID_JSON", "error": "Request body must be JSON."}), 400
 
-    data = request.get_json(silent=True) or {}
-    tokens_str = data.get("tokens", "").strip()
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({"success": False, "error_code": "MISSING_BODY", "error": "Empty or invalid JSON body."}), 400
 
-    if not tokens_str:
-        return jsonify({"success": False, "error": "Empty input: Inscribe preorder tokens."}), 400
+    tokens = body.get("tokens", "")
+    if not isinstance(tokens, str) or not tokens.strip():
+        return jsonify({"success": False, "error_code": "EMPTY_TOKENS", "error": "Tokens string cannot be empty."}), 400
 
-    tokens = tokens_str.split()
-    try:
-        root = build_tree_from_tokens(tokens)
-        pre = get_preorder(root)
-        ino = get_inorder(root)
-        post = get_postorder(root)
-        height = get_tree_height(root)
-        serialized = serialize_tree(root)
+    ok, data, code = call_c_engine(["--create", tokens.strip()])
+    return jsonify(data), code
 
-        nulls_count = tokens.count("#")
 
-        return jsonify({
-            "success": True,
-            "tree": root.to_dict() if root else None,
-            "traversals": {
-                "preorder": pre,
-                "inorder": ino,
-                "postorder": post
-            },
-            "serialized": serialized,
-            "height": height,
-            "stats": {
-                "nodes": len(pre),
-                "height": height,
-                "nulls": nulls_count
-            }
-        })
-    except ValueError as e:
-        return jsonify({"success": False, "error": str(e)}), 400
-    except Exception as e:
-        return jsonify({"success": False, "error": f"Internal parsing anomaly: {str(e)}"}), 500
+@app.route("/api/tree/serialize", methods=["POST"])
+def serialize_tree():
+    """
+    3. Serialize endpoint.
+    Input: {"tokens": "A B # D # # C # #"}
+    """
+    if not request.is_json:
+        return jsonify({"success": False, "error_code": "INVALID_JSON", "error": "Request body must be JSON."}), 400
 
-@app.route("/api/tree/serialize", methods=["POST", "OPTIONS"])
-def serialize_endpoint():
-    if request.method == "OPTIONS":
-        return "", 200
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({"success": False, "error_code": "MISSING_BODY", "error": "Empty or invalid JSON body."}), 400
 
-    data = request.get_json(silent=True) or {}
-    tokens_str = data.get("tokens", "").strip()
-    if not tokens_str:
-        return jsonify({"success": False, "error": "No tokens supplied."}), 400
+    tokens = body.get("tokens", "")
+    if not isinstance(tokens, str) or not tokens.strip():
+        return jsonify({"success": False, "error_code": "EMPTY_TOKENS", "error": "Tokens string cannot be empty."}), 400
 
-    try:
-        tokens = tokens_str.split()
-        root = build_tree_from_tokens(tokens)
-        serialized = serialize_tree(root)
-        return jsonify({
-            "success": True,
-            "serialized": serialized
-        })
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 400
+    ok, data, code = call_c_engine(["--serialize", tokens.strip()])
+    return jsonify(data), code
 
-@app.route("/api/tree/restore", methods=["POST", "OPTIONS"])
-def restore_endpoint():
-    if request.method == "OPTIONS":
-        return "", 200
 
-    data = request.get_json(silent=True) or {}
-    archive_text = data.get("archive_text", "").strip()
+@app.route("/api/archive/export", methods=["POST"])
+def export_archive():
+    """
+    4. Export archive endpoint.
+    Input: {"tokens": "A B # D # # C # #", "filename": "royal_dynasty.txt", "dynasty_name": "..."}
+    """
+    if not request.is_json:
+        return jsonify({"success": False, "error_code": "INVALID_JSON", "error": "Request body must be JSON."}), 400
 
-    if not archive_text:
-        return jsonify({"success": False, "error": "Archive manuscript scroll is empty."}), 400
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({"success": False, "error_code": "MISSING_BODY", "error": "Empty or invalid JSON body."}), 400
 
-    tokens = archive_text.split()
-    try:
-        root = build_tree_from_tokens(tokens)
-        pre = get_preorder(root)
-        ino = get_inorder(root)
-        post = get_postorder(root)
-        height = get_tree_height(root)
+    tokens = body.get("tokens", "")
+    if not isinstance(tokens, str) or not tokens.strip():
+        return jsonify({"success": False, "error_code": "EMPTY_TOKENS", "error": "Tokens string cannot be empty."}), 400
 
-        return jsonify({
-            "success": True,
-            "tree": root.to_dict() if root else None,
-            "traversals": {
-                "preorder": pre,
-                "inorder": ino,
-                "postorder": post
-            },
-            "height": height,
-            "stats": {
-                "nodes": len(pre),
-                "height": height,
-                "nulls": tokens.count("#")
-            }
-        })
-    except ValueError as e:
-        return jsonify({"success": False, "error": str(e)}), 400
-    except Exception as e:
-        return jsonify({"success": False, "error": f"Restoration failure: {str(e)}"}), 500
+    filename = body.get("filename", "").strip() or "museum_family_tree_archive.txt"
+    # Sanitize filename
+    clean_filename = "".join(c for c in filename if c.isalnum() or c in "._- ")
+    if not clean_filename.endswith(".txt"):
+        clean_filename += ".txt"
 
-@app.route("/api/tree/validate", methods=["POST", "OPTIONS"])
-def validate_endpoint():
-    if request.method == "OPTIONS":
-        return "", 200
+    dynasty_name = body.get("dynasty_name", "Imperial Royal Dynasty").strip()
+    dest_path = EXPORTS_DIR / clean_filename
 
-    data = request.get_json(silent=True) or {}
-    archive_text = data.get("archive_text", "").strip()
+    ok, data, code = call_c_engine(["--export", tokens.strip(), str(dest_path), dynasty_name])
+    if not ok:
+        return jsonify(data), code
 
-    if not archive_text:
-        return jsonify({
-            "valid": False,
-            "error": "Empty manuscript scroll: No tokens detected."
-        }), 400
+    data["filename"] = clean_filename
+    data["download_url"] = f"/api/archive/download/{clean_filename}"
+    data["export_success"] = True
+    return jsonify(data), 200
 
-    tokens = archive_text.split()
-    try:
-        build_tree_from_tokens(tokens)
-        return jsonify({
-            "valid": True,
-            "message": "Archival stream is structurally intact and satisfies all binary tree invariants."
-        })
-    except ValueError as e:
-        return jsonify({
-            "valid": False,
-            "error": str(e)
-        }), 400
-    except Exception as e:
-        return jsonify({
-            "valid": False,
-            "error": f"Structural defect: {str(e)}"
-        }), 400
 
-@app.route("/api/tree/compare", methods=["POST", "OPTIONS"])
-def compare_endpoint():
-    if request.method == "OPTIONS":
-        return "", 200
+@app.route("/api/archive/download/<filename>", methods=["GET"])
+def download_archive(filename):
+    """Direct file download for exported archive."""
+    clean_filename = "".join(c for c in filename if c.isalnum() or c in "._- ")
+    file_path = EXPORTS_DIR / clean_filename
+    if not file_path.exists():
+        return jsonify({"success": False, "error": f"File '{clean_filename}' not found."}), 404
 
-    data = request.get_json(silent=True) or {}
-    orig_str = data.get("original", "").strip()
-    rest_str = data.get("restored", "").strip()
+    return send_file(
+        str(file_path),
+        as_attachment=True,
+        download_name=clean_filename,
+        mimetype="text/plain"
+    )
 
-    try:
-        orig_tokens = orig_str.split()
-        rest_tokens = rest_str.split()
 
-        orig_root = build_tree_from_tokens(orig_tokens)
-        rest_root = build_tree_from_tokens(rest_tokens)
+@app.route("/api/archive/restore", methods=["POST"])
+def restore_archive():
+    """
+    5. Restore archive endpoint.
+    Input: {"archive_text": "..."}
+    """
+    if not request.is_json:
+        return jsonify({"success": False, "error_code": "INVALID_JSON", "error": "Request body must be JSON."}), 400
 
-        orig_pre = get_preorder(orig_root)
-        rest_pre = get_preorder(rest_root)
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({"success": False, "error_code": "MISSING_BODY", "error": "Empty or invalid JSON body."}), 400
 
-        orig_ino = get_inorder(orig_root)
-        rest_ino = get_inorder(rest_root)
+    archive_text = body.get("archive_text", "")
+    if not isinstance(archive_text, str) or not archive_text.strip():
+        return jsonify({"success": False, "error_code": "EMPTY_ARCHIVE", "error": "Archive text cannot be empty."}), 400
 
-        match = (orig_pre == rest_pre) and (orig_ino == rest_ino)
+    ok, data, code = call_c_engine(["--restore", archive_text])
+    return jsonify(data), code
 
-        return jsonify({
-            "success": True,
-            "match": match,
-            "original_preorder": orig_pre,
-            "restored_preorder": rest_pre,
-            "original_inorder": orig_ino,
-            "restored_inorder": rest_ino
-        })
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 400
+
+@app.route("/api/archive/validate", methods=["POST"])
+def validate_archive():
+    """
+    6. Validate archive endpoint.
+    Input: {"archive_text": "..."}
+    """
+    if not request.is_json:
+        return jsonify({"success": False, "error_code": "INVALID_JSON", "error": "Request body must be JSON."}), 400
+
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({"success": False, "error_code": "MISSING_BODY", "error": "Empty or invalid JSON body."}), 400
+
+    archive_text = body.get("archive_text", "")
+    if not isinstance(archive_text, str):
+        archive_text = ""
+
+    ok, data, code = call_c_engine(["--validate", archive_text])
+    return jsonify(data), code
+
+
+@app.route("/api/tree/compare", methods=["POST"])
+def compare_trees():
+    """
+    7. Compare trees endpoint.
+    Input:
+    {
+      "original_tokens": "A B # D # # C # #",
+      "restored_archive": "..."
+    }
+    """
+    if not request.is_json:
+        return jsonify({"success": False, "error_code": "INVALID_JSON", "error": "Request body must be JSON."}), 400
+
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({"success": False, "error_code": "MISSING_BODY", "error": "Empty or invalid JSON body."}), 400
+
+    orig = body.get("original_tokens") or body.get("tokens1") or ""
+    rest = body.get("restored_archive") or body.get("tokens2") or body.get("archive_text") or ""
+
+    if not isinstance(orig, str) or not orig.strip():
+        return jsonify({"success": False, "error_code": "EMPTY_ORIGINAL_TOKENS", "error": "Original tokens cannot be empty."}), 400
+    if not isinstance(rest, str) or not rest.strip():
+        return jsonify({"success": False, "error_code": "EMPTY_COMPARISON_ARCHIVE", "error": "Restored archive/tokens cannot be empty."}), 400
+
+    ok, data, code = call_c_engine(["--compare", orig.strip(), rest.strip()])
+    return jsonify(data), code
+
+
+# ---------------------------------------------------------
+# Error Handlers
+# ---------------------------------------------------------
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({"success": False, "error": "Resource not found", "error_code": "NOT_FOUND"}), 404
+
+@app.errorhandler(405)
+def method_not_allowed(e):
+    return jsonify({"success": False, "error": "Method not allowed", "error_code": "METHOD_NOT_ALLOWED"}), 405
+
+@app.errorhandler(500)
+def server_error(e):
+    return jsonify({"success": False, "error": "Internal server error", "error_code": "INTERNAL_SERVER_ERROR"}), 500
+
 
 if __name__ == "__main__":
+    ensure_engine_compiled()
     port = int(os.environ.get("PORT", 5000))
-    print(f"Museum Archival Conservancy Flask Server running on http://127.0.0.1:{port}")
-    app.run(host="0.0.0.0", port=port, debug=True)
+    print(f"[*] The Museum's Vanishing Family Trees Backend running on http://127.0.0.1:{port}")
+    app.run(host="0.0.0.0", port=port, debug=False)
