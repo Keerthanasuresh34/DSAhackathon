@@ -3,864 +3,321 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The Museum's Vanishing Family Trees — Archiving & Recovery System</title>
-  <meta name="description" content="Digital museum curation system for preserving, archiving, and recovering historical binary family trees from vanishing manuscripts.">
-  
-  <!-- Google Fonts: Elegant Museum Serif & Clean Sans -->
+  <title>The Museum's Vanishing Family Trees — Tree Archiving & Recovery System</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  
-  <!-- Museum Stylesheet -->
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
-<body class="museum-theme">
-
-  <!-- Ambient Golden Dust Canvas -->
-  <canvas id="ambientCanvas" class="ambient-canvas" aria-hidden="true"></canvas>
-
-  <!-- ================= TOP ARCHIVAL BANNER ================= -->
-  <header class="museum-header" role="banner">
-    <div class="header-inner">
-      <div class="header-crest">
-        <svg class="crest-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <circle cx="24" cy="24" r="22" stroke="var(--gold-primary)" stroke-width="2" stroke-dasharray="2 3"/>
-          <path d="M24 8V38M24 16L14 26M24 16L34 26M14 26L8 34M14 26L20 34M34 26L28 34M34 26L40 34" stroke="var(--gold-dark)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="24" cy="12" r="3.5" fill="var(--gold-primary)"/>
-          <circle cx="14" cy="26" r="3" fill="var(--gold-primary)"/>
-          <circle cx="34" cy="26" r="3" fill="var(--gold-primary)"/>
-          <circle cx="8" cy="34" r="2.2" fill="var(--navy-primary)"/>
-          <circle cx="20" cy="34" r="2.2" fill="var(--navy-primary)"/>
-          <circle cx="28" cy="34" r="2.2" fill="var(--navy-primary)"/>
-          <circle cx="40" cy="34" r="2.2" fill="var(--navy-primary)"/>
-        </svg>
-      </div>
-
-      <div class="header-title-block">
-        <div class="museum-department">ARCHIVES & RECOVERY CONSERVANCY &bull; DEPARTMENT OF HISTORICAL LINEAGES</div>
-        <h1 class="project-title">The Museum's Vanishing Family Trees</h1>
-        <h2 class="project-subtitle">Binary Tree Archiving & Recovery System</h2>
-        <p class="project-description">
-          Conserving fragile genealogical records. Utilizing serialized preorder markers with null-terminating leaves (<code>#</code>) to faithfully archive, preserve, and mathematically recover lost royal and familial tree topologies.
-        </p>
-      </div>
-
-      <div class="header-meta">
-        <!-- Live System Status Indicator -->
-        <div class="system-status-pill" id="systemStatusPill" title="Backend Connection Health">
-          <span class="status-pulse" id="statusPulse" aria-hidden="true"></span>
-          <div class="status-details">
-            <span class="status-label">CONSERVANCY SYSTEM</span>
-            <span class="status-value" id="statusValue">Checking Server...</span>
-          </div>
-          <button class="status-refresh-btn" id="pingBackendBtn" title="Ping Flask Backend" aria-label="Ping Backend">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-          </button>
+<body class="theme-dark">
+  <!-- Header Banner -->
+  <header class="museum-header">
+    <div class="header-content">
+      <div class="museum-badge">
+        <span class="crest-icon">🏛️</span>
+        <div class="badge-text">
+          <span class="hall-name">ALEXANDRIA ARCHIVAL PRESERVATION VAULT</span>
+          <span class="sys-id">SYSTEM SPEC: C11-PREORDER-NULL-V1</span>
         </div>
-
-        <!-- Curatorial Tools Button -->
-        <div class="curator-actions">
-          <button class="btn btn-ghost btn-sm" id="toggleAtmosphereBtn" title="Toggle Gold Dust Atmosphere">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
-            <span id="atmoLabel">Sparks On</span>
-          </button>
-          <button class="btn btn-ghost btn-sm" id="openSettingsBtn" title="API Configuration">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            API Endpoint
-          </button>
-          <button class="btn btn-ghost btn-sm" id="toggleSoundBtn" title="Toggle Archival Chimes">
-            <svg id="soundIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-            <span id="soundLabel">Sound On</span>
-          </button>
-        </div>
+      </div>
+      <h1 class="main-title">The Museum's Vanishing Family Trees</h1>
+      <p class="subtitle">Binary Tree Serialization, Archival Storage, Damage Forensics & Lossless Dynastic Recovery</p>
+      
+      <div class="status-bar">
+        <span class="status-pill status-healthy" id="cEngineStatus">
+          <span class="dot"></span> C Engine: Initializing...
+        </span>
+        <span class="status-pill" id="flaskStatus">
+          <span class="dot"></span> Flask API: Ready
+        </span>
+        <button class="theme-toggle" id="themeToggleBtn" title="Toggle Museum Night / Parchment Mode">📜 Parchment Mode</button>
       </div>
     </div>
-
-    <!-- Quick Section Navigation Bar -->
-    <nav class="curator-navbar" aria-label="Museum sections">
-      <div class="nav-links">
-        <a href="#creation-section" class="nav-pill active"><span class="pill-num">01</span> Accession Desk</a>
-        <a href="#visualization-section" class="nav-pill"><span class="pill-num">02</span> Specimen Tree</a>
-        <a href="#traversal-section" class="nav-pill"><span class="pill-num">03</span> Traversal Chronicles</a>
-        <a href="#archive-section" class="nav-pill"><span class="pill-num">04</span> Preservation Vault</a>
-        <a href="#recovery-section" class="nav-pill"><span class="pill-num">05</span> Restoration Workshop</a>
-        <a href="#comparison-section" class="nav-pill"><span class="pill-num">06</span> Forensic Audit</a>
-        <a href="#damage-testing-section" class="nav-pill"><span class="pill-num">07</span> Damaged Archive Stress Lab</a>
-      </div>
-    </nav>
   </header>
 
-  <!-- ================= MAIN DASHBOARD CONTAINER ================= -->
+  <!-- Main Container -->
   <main class="dashboard-container">
 
-    <!-- Global Alert Banner for Critical Status -->
-    <div id="globalNotification" class="notification-banner hidden" role="status" aria-live="polite">
-      <div class="notification-icon" id="notificationIcon"></div>
-      <div class="notification-message" id="notificationMessage"></div>
-      <button class="notification-close" id="notificationCloseBtn" aria-label="Close notification">&times;</button>
+    <!-- Top Column 1: Tree Construction & Control -->
+    <div class="dashboard-grid">
+      
+      <!-- Panel 1: Lineage Digitizer & Presets -->
+      <section class="panel digitizer-panel">
+        <div class="panel-header">
+          <span class="panel-icon">📜</span>
+          <h2>1. Dynastic Lineage Digitizer</h2>
+        </div>
+        <div class="panel-body">
+          <label for="treePresetSelect" class="input-label">Select Archival Dynasty Preset:</label>
+          <div class="preset-row">
+            <select id="treePresetSelect" class="styled-select">
+              <option value="A B # D # # C # #">Museum Sample: Ptolemaic Dynasty (A B # D # # C # #)</option>
+              <option value="A B D # # E # # C F # # G # #">Balanced Imperial Dynasty (7 nodes)</option>
+              <option value="A B C D # # # # #">Strict Left-Branch Patriarchs (Left-Only)</option>
+              <option value="A # B # C # D # #">Strict Right-Branch Lineage (Right-Only)</option>
+              <option value="Alexandria # Cairo Luxor # # #">Mixed Asymmetric Lineage</option>
+              <option value="DynastyRoot # #">Single Monarch Node (A # #)</option>
+              <option value="#">Empty Royal Lineage (#)</option>
+            </select>
+            <button id="loadPresetBtn" class="btn btn-secondary">Load</button>
+          </div>
+
+          <label for="treeTokensInput" class="input-label">Preorder Lineage Tokens (use <code>#</code> for empty branch):</label>
+          <div class="input-wrapper">
+            <input type="text" id="treeTokensInput" class="styled-input" placeholder="e.g. A B # D # # C # #" value="A B # D # # C # #">
+            <button id="clearTokensBtn" class="clear-btn" title="Clear">✕</button>
+          </div>
+          <div class="token-meta">
+            <span id="tokenCounter">Tokens: 9 | Nodes: 4 | Sentinels: 5</span>
+          </div>
+
+          <div class="btn-group">
+            <button id="createTreeBtn" class="btn btn-primary">
+              <span class="btn-icon">⚡</span> Construct & Visualize Tree
+            </button>
+            <button id="serializeBtn" class="btn btn-accent">
+              <span class="btn-icon">📦</span> Serialize Tokens
+            </button>
+            <button id="exportArchiveBtn" class="btn btn-gold">
+              <span class="btn-icon">💾</span> Export to Archival Record
+            </button>
+          </div>
+
+          <!-- Serialization Feedback -->
+          <div class="serialization-card hidden" id="serializationCard">
+            <div class="card-header">
+              <span>Serialized Tree Stream</span>
+              <button class="copy-btn" id="copySerializedBtn" title="Copy to clipboard">📋 Copy</button>
+            </div>
+            <pre class="serialized-text" id="serializedOutput"></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Panel 2: Live Metrics & Traversal Highlighters -->
+      <section class="panel metrics-panel">
+        <div class="panel-header">
+          <span class="panel-icon">📊</span>
+          <h2>2. Lineage Metrics & Traversals</h2>
+        </div>
+        <div class="panel-body">
+          <div class="metrics-grid">
+            <div class="metric-box">
+              <span class="metric-label">Total Monarchs</span>
+              <span class="metric-value" id="nodeCountMetric">-</span>
+            </div>
+            <div class="metric-box">
+              <span class="metric-label">Lineage Height</span>
+              <span class="metric-value" id="heightMetric">-</span>
+            </div>
+            <div class="metric-box">
+              <span class="metric-label">Null Sentinels (#)</span>
+              <span class="metric-value" id="sentinelCountMetric">-</span>
+            </div>
+            <div class="metric-box">
+              <span class="metric-label">Parity Formula (N+1)</span>
+              <span class="metric-value" id="parityMetric">Valid</span>
+            </div>
+          </div>
+
+          <div class="traversal-group">
+            <div class="traversal-card">
+              <div class="traversal-header">
+                <span class="t-badge preorder-badge">PREORDER</span>
+                <span class="t-desc">(Root → Left → Right)</span>
+                <button class="play-traversal-btn" data-traversal="preorder" title="Animate Preorder">▶ Animate</button>
+              </div>
+              <div class="traversal-sequence" id="preorderDisplay">-</div>
+            </div>
+
+            <div class="traversal-card">
+              <div class="traversal-header">
+                <span class="t-badge inorder-badge">INORDER</span>
+                <span class="t-desc">(Left → Root → Right)</span>
+                <button class="play-traversal-btn" data-traversal="inorder" title="Animate Inorder">▶ Animate</button>
+              </div>
+              <div class="traversal-sequence" id="inorderDisplay">-</div>
+            </div>
+
+            <div class="traversal-card">
+              <div class="traversal-header">
+                <span class="t-badge postorder-badge">POSTORDER</span>
+                <span class="t-desc">(Left → Right → Root)</span>
+                <button class="play-traversal-btn" data-traversal="postorder" title="Animate Postorder">▶ Animate</button>
+              </div>
+              <div class="traversal-sequence" id="postorderDisplay">-</div>
+            </div>
+          </div>
+
+          <div class="ascii-toggle-container">
+            <button id="toggleAsciiBtn" class="btn btn-sm btn-outline">Show ASCII Tree Diagram</button>
+            <pre class="ascii-display hidden" id="asciiDisplay"></pre>
+          </div>
+        </div>
+      </section>
     </div>
 
-    <!-- ================= 1. TREE CREATION SECTION ================= -->
-    <section id="creation-section" class="archival-card" aria-labelledby="heading-creation">
-      <div class="card-header">
-        <div class="badge-index">SECTION 01</div>
-        <div class="card-titles">
-          <h2 id="heading-creation" class="card-title">Tree Ingestion & Accession Desk</h2>
-          <p class="card-subtitle">Input historical family tree topology using space-delimited preorder tokens</p>
+    <!-- Middle Section: Dynamic Tree Visualizer Canvas -->
+    <section class="panel visualizer-panel">
+      <div class="panel-header">
+        <div class="visualizer-header-left">
+          <span class="panel-icon">🌲</span>
+          <h2>3. Dynastic Tree Interactive Canvas</h2>
         </div>
-        <div class="card-accession-tag">DOC. REGISTRY: #TR-IN-001</div>
+        <div class="visualizer-controls">
+          <label class="toggle-control">
+            <input type="checkbox" id="showNullNodesToggle" checked>
+            <span>Show Empty Leaf Markers (#)</span>
+          </label>
+          <button id="resetZoomBtn" class="btn btn-sm btn-outline">Reset Center</button>
+        </div>
       </div>
-
-      <div class="card-body">
-        <!-- Guided explanation banner -->
-        <div class="archival-instructions-box">
-          <div class="instructions-header">
-            <svg class="feather-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-            <strong>Archival Notation Protocol</strong>
-          </div>
-          <ul class="instructions-list">
-            <li><strong>Token Separation:</strong> Separate each royal lineage node and missing branch with a single space.</li>
-            <li><strong>Vanishing Heir Marker (<code>#</code>):</strong> Use <code>#</code> to denote a null child or missing ancestral branch.</li>
-            <li><strong>Preorder Traversal Sequence:</strong> Inscribe strictly in order: <code>Root &rarr; Left Subtree &rarr; Right Subtree</code>.</li>
-            <li><strong>Example:</strong> <code>A B # D # # C # #</code> (A is root; A has left B and right C; B has no left child, right child D; D and C are leaves).</li>
-          </ul>
-        </div>
-
-        <!-- Token Input Form -->
-        <div class="input-form-grid">
-          <div class="input-wrapper">
-            <label for="treeTokensInput" class="input-label">
-              <span>PREORDER TOKEN STREAM</span>
-              <span class="token-counter" id="tokenCounterBadge">Tokens: 0 | Nodes: 0 | Missing (#): 0</span>
-            </label>
-            <div class="input-field-container">
-              <textarea 
-                id="treeTokensInput" 
-                class="token-textarea" 
-                rows="3" 
-                placeholder="Enter preorder tokens e.g. A B # D # # C # #"
-                spellcheck="false"
-                autocomplete="off"
-              >A B # D # # C # #</textarea>
-              <button class="btn-clear-inline" id="clearInputBtn" title="Clear Textarea" aria-label="Clear Input">&times;</button>
-            </div>
-            <!-- Live Input Validation Status Bar -->
-            <div class="input-feedback" id="inputValidationFeedback">
-              <span class="feedback-indicator valid"></span>
-              <span class="feedback-text" id="feedbackText">Ready to ingest archive stream.</span>
-            </div>
-
-            <!-- Live Interactive Token Ribbon Streamer -->
-            <div class="live-token-ribbon" id="liveTokenRibbon">
-              <div class="ribbon-header">
-                <span class="ribbon-label">LIVE PARSER TAPE:</span>
-                <span class="balance-gauge" id="treeBalanceGauge">Balance Invariant: 0 / 0</span>
-              </div>
-              <div class="ribbon-chips" id="liveTokenChips"></div>
-            </div>
-          </div>
-
-          <!-- Quick Actions & Presets -->
-          <div class="presets-panel">
-            <label class="input-label">SAMPLE ARCHIVAL SPECIMENS</label>
-            <div class="sample-buttons-cluster">
-              <button class="btn btn-sample" data-sample="A B # D # # C # #" title="Standard default sample with left and right children">
-                <span class="sample-name">Standard Specimen</span>
-                <span class="sample-code">A B # D # # C # #</span>
-              </button>
-              <button class="btn btn-sample" data-sample="Tudor Henry Arthur # # Margaret James # # Mary # #" title="Named royal family tree">
-                <span class="sample-name">House of Tudor</span>
-                <span class="sample-code">Tudor Henry...</span>
-              </button>
-              <button class="btn btn-sample" data-sample="1 2 4 # # 5 # # 3 6 # # 7 # #" title="Full 3-level balanced binary tree">
-                <span class="sample-name">Balanced Dynasty (3-Lvl)</span>
-                <span class="sample-code">1 2 4 # # 5 # # 3 6...</span>
-              </button>
-              <button class="btn btn-sample" data-sample="Solomon David Jesse Obed Boaz # # # # #" title="Direct single-heir lineage (skewed)">
-                <span class="sample-name">Linear Succession</span>
-                <span class="sample-code">Solomon David Jesse...</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Action Toolbar -->
-        <div class="toolbar-actions">
-          <button class="btn btn-primary" id="loadTreeBtn">
-            <span class="btn-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-            </span>
-            <span class="btn-text">Ingest & Construct Tree</span>
-            <span class="spinner hidden" id="loadTreeSpinner"></span>
-          </button>
-
-          <button class="btn btn-secondary" id="resetTreeBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-            Reset Ingestion Desk
-          </button>
-
-          <button class="btn btn-outline" id="loadSampleBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-            Load Default Example
-          </button>
+      <div class="visualizer-body" id="treeCanvasWrapper">
+        <svg id="treeSvg" class="tree-svg"></svg>
+        <div id="treeEmptyState" class="canvas-empty-state">
+          <span class="empty-icon">📜</span>
+          <p>No lineage currently rendered. Enter tokens above and click "Construct & Visualize Tree".</p>
         </div>
       </div>
     </section>
 
-    <!-- ================= 2. ORIGINAL TREE VISUALIZATION ================= -->
-    <section id="visualization-section" class="archival-card" aria-labelledby="heading-visualization">
-      <div class="card-header">
-        <div class="badge-index">SECTION 02</div>
-        <div class="card-titles">
-          <h2 id="heading-visualization" class="card-title">Original Specimen Exhibition</h2>
-          <p class="card-subtitle">Graphical interactive SVG representation of the active binary family tree</p>
+    <!-- Bottom Section: Archival Vault, Recovery & Verification -->
+    <div class="dashboard-grid">
+
+      <!-- Panel 4: Archival Record Vault & Damaged Archive Sandbox -->
+      <section class="panel vault-panel">
+        <div class="panel-header">
+          <span class="panel-icon">🏺</span>
+          <h2>4. Archival Vault & Recovery Station</h2>
         </div>
-        <div class="card-accession-tag">VIEWPORT: SPECIMEN-PRIMARY</div>
-      </div>
-
-      <div class="card-body">
-        <!-- Visualization Toolbar -->
-        <div class="canvas-control-bar">
-          <div class="tree-metrics" id="treeMetricsBadge">
-            <span class="metric-item"><strong id="metricNodes">0</strong> Active Nodes</span>
-            <span class="metric-divider">&bull;</span>
-            <span class="metric-item"><strong id="metricHeight">0</strong> Generations (Height)</span>
-            <span class="metric-divider">&bull;</span>
-            <span class="metric-item"><strong id="metricNulls">0</strong> Vanished Leaves (#)</span>
-            <span class="metric-divider">&bull;</span>
-            <span class="metric-item" id="metricBalance">Awaiting Input</span>
-          </div>
-
-          <div class="canvas-buttons">
-            <button class="btn-tool" id="toggleOrientationBtn" title="Switch between Vertical & Horizontal Layout">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4M7 4L3 8M7 4l4 4M17 8v12M17 20l4-4M17 20l-4-4"/></svg>
-              <span id="orientationLabel">Vertical</span>
-            </button>
-            <button class="btn-tool" id="pulseTreeBtn" title="Trigger Ancestral Illumination Pulse">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-              <span>Pulse Path</span>
-            </button>
-            <button class="btn-tool" id="zoomInBtn" title="Zoom In" aria-label="Zoom In">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-            </button>
-            <button class="btn-tool" id="zoomOutBtn" title="Zoom Out" aria-label="Zoom Out">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-            </button>
-            <button class="btn-tool" id="resetZoomBtn" title="Reset Camera View" aria-label="Reset View">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-            </button>
-            <button class="btn-tool" id="toggleNullsBtn" title="Toggle Ghost Null Markers (#)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-dasharray="2 2"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-              <span>Toggle Ghost #</span>
-            </button>
-            <button class="btn-tool" id="exportSvgBtn" title="Export Tree Diagram as SVG">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-              <span>Save SVG</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- SVG Viewport Frame -->
-        <div class="tree-canvas-frame" id="canvasFrame">
-          <div class="canvas-watermark">ARCHIVAL EXHIBIT CANVAS</div>
+        <div class="panel-body">
+          <label for="archiveTextInput" class="input-label">Archive Record Content (Parchment Document or Raw Tokens):</label>
+          <textarea id="archiveTextInput" class="styled-textarea" rows="8" placeholder="Paste museum archive text or serialized token sequence here..."></textarea>
           
-          <div class="canvas-empty-state" id="canvasEmptyState">
-            <svg class="empty-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5">
-              <circle cx="32" cy="16" r="8" stroke="var(--gold-dark)"/>
-              <circle cx="16" cy="40" r="7" stroke="var(--ink-light)" stroke-dasharray="3 3"/>
-              <circle cx="48" cy="40" r="7" stroke="var(--ink-light)"/>
-              <path d="M28 23L19 33M36 23L45 33" stroke="var(--border-parchment)"/>
-            </svg>
-            <h3 class="empty-title">Specimen Chamber Empty</h3>
-            <p class="empty-desc">Inscribe tokens at the Accession Desk above and click <em>"Ingest & Construct Tree"</em> to illuminate the binary family tree.</p>
-          </div>
-
-          <!-- The Dynamic Interactive SVG Container -->
-          <svg id="treeSvgCanvas" class="tree-svg" preserveAspectRatio="xMidYMid meet">
-            <defs>
-              <!-- Archival Drop Shadow Filter -->
-              <filter id="nodeShadow" x="-20%" y="-20%" width="150%" height="150%">
-                <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="rgba(26, 32, 44, 0.18)"/>
-              </filter>
-              <!-- Gold Glow Filter -->
-              <filter id="goldGlow" x="-30%" y="-30%" width="160%" height="160%">
-                <feGaussianBlur stdDeviation="3" result="blur"/>
-                <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-              </filter>
-              <!-- Lineage Connection Arrow Marker -->
-              <marker id="branchArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                <path d="M 0 1 L 9 5 L 0 9 z" fill="var(--gold-dark)"/>
-              </marker>
-            </defs>
-            <g id="svgPanGroup" transform="translate(0, 0) scale(1)">
-              <!-- Dynamic links and nodes rendered here via script.js -->
-              <g id="svgLinksLayer"></g>
-              <g id="svgNodesLayer"></g>
-            </g>
-          </svg>
-
-          <!-- Interactive Node Inspector Card / Tooltip -->
-          <div class="node-inspector-floating hidden" id="nodeInspector">
-            <div class="inspector-badge">INSPECTED SPECIMEN NODE</div>
-            <div class="inspector-val" id="inspVal">Charlemagne</div>
-            <div class="inspector-grid">
-              <div><span>Level/Depth:</span> <strong id="inspDepth">0 (Root)</strong></div>
-              <div><span>Subtree Nodes:</span> <strong id="inspSize">4</strong></div>
-              <div><span>Left Branch:</span> <strong id="inspLeft">Present</strong></div>
-              <div><span>Right Branch:</span> <strong id="inspRight">Vanished (#)</strong></div>
+          <!-- Damage Sandbox Quick Injectors -->
+          <div class="damage-sandbox">
+            <span class="sandbox-title">Inject Damaged Parchment Artifacts (Test Suite):</span>
+            <div class="sandbox-buttons">
+              <button class="damage-btn" data-type="incomplete">Incomplete Tokens</button>
+              <button class="damage-btn" data-type="extra">Extra Tokens</button>
+              <button class="damage-btn" data-type="illegal_glyph">Illegal Glyphs (@#!)</button>
+              <button class="damage-btn" data-type="empty">Empty Archive</button>
+              <button class="damage-btn" data-type="exceed_nodes">2000+ Nodes</button>
             </div>
           </div>
-        </div>
 
-        <div class="tree-legend">
-          <span class="legend-item"><span class="legend-swatch node-root"></span> Sovereign Root</span>
-          <span class="legend-item"><span class="legend-swatch node-internal"></span> Royal Node</span>
-          <span class="legend-item"><span class="legend-swatch node-leaf"></span> Terminal Heir (Leaf)</span>
-          <span class="legend-item"><span class="legend-swatch node-null"></span> Vanished Branch (<code>#</code>)</span>
-          <span class="legend-help">Tip: Drag canvas to pan &bull; Scroll or pinch to zoom &bull; Click any node to inspect lineage details</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- ================= 3. TREE TRAVERSAL SECTION ================= -->
-    <section id="traversal-section" class="archival-card" aria-labelledby="heading-traversals">
-      <div class="card-header">
-        <div class="badge-index">SECTION 03</div>
-        <div class="card-titles">
-          <h2 id="heading-traversals" class="card-title">Tree Traversal Chronicles & Inscriptions</h2>
-          <p class="card-subtitle">Three canonical mathematical walks through the binary tree structure</p>
-        </div>
-        <div class="card-accession-tag">CURATORIAL CATALOG: TRV-003</div>
-      </div>
-
-      <div class="card-body">
-        <!-- Interactive Playback Animator Bar -->
-        <div class="playback-bar">
-          <div class="playback-info">
-            <span class="playback-title">Interactive Traversal Playback</span>
-            <span class="playback-sub">Visually step through nodes on the specimen canvas</span>
-          </div>
-          <div class="playback-controls">
-            <select id="playbackTraversalSelect" class="select-traversal">
-              <option value="preorder">Preorder (Catalog Inscription)</option>
-              <option value="inorder">Inorder (Heraldic Symmetry)</option>
-              <option value="postorder">Postorder (Ancestral Resolution)</option>
-            </select>
-            <button class="btn btn-sm btn-secondary" id="playTraversalBtn">
-              <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-              <span>Play Walk</span>
+          <div class="btn-group">
+            <button id="validateArchiveBtn" class="btn btn-accent">
+              <span class="btn-icon">🔍</span> Validate Archive Integrity
             </button>
-            <button class="btn btn-sm btn-ghost" id="pauseTraversalBtn" disabled>
-              <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-              <span>Stop</span>
-            </button>
-            <div class="speed-control">
-              <label for="playbackSpeed">Speed:</label>
-              <input type="range" id="playbackSpeed" min="200" max="1500" step="100" value="700">
-            </div>
-          </div>
-        </div>
-
-        <!-- Traversal Cards Grid -->
-        <div class="traversals-grid">
-          <!-- Preorder Card -->
-          <div class="traversal-card" id="cardPreorder">
-            <div class="traversal-card-header">
-              <div class="traversal-order-tag">NLR ORDER</div>
-              <h3 class="traversal-name">Preorder Traversal</h3>
-              <button class="copy-btn" data-copy-target="preorderOutput" title="Copy preorder sequence">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-              </button>
-            </div>
-            <div class="traversal-formula">Root &rarr; Left Subtree &rarr; Right Subtree</div>
-            <p class="traversal-explanation">
-              Visits the ancestor before descending to heirs. Represents the archival accession order and serialization stream foundation.
-            </p>
-            <div class="traversal-stream" id="preorderOutput">
-              <span class="stream-placeholder">Awaiting tree construction...</span>
-            </div>
-          </div>
-
-          <!-- Inorder Card -->
-          <div class="traversal-card" id="cardInorder">
-            <div class="traversal-card-header">
-              <div class="traversal-order-tag">LNR ORDER</div>
-              <h3 class="traversal-name">Inorder Traversal</h3>
-              <button class="copy-btn" data-copy-target="inorderOutput" title="Copy inorder sequence">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-              </button>
-            </div>
-            <div class="traversal-formula">Left Subtree &rarr; Root &rarr; Right Subtree</div>
-            <p class="traversal-explanation">
-              Traverses from left descendants to the parent, then to right descendants. For binary search trees, this yields natural sorted order.
-            </p>
-            <div class="traversal-stream" id="inorderOutput">
-              <span class="stream-placeholder">Awaiting tree construction...</span>
-            </div>
-          </div>
-
-          <!-- Postorder Card -->
-          <div class="traversal-card" id="cardPostorder">
-            <div class="traversal-card-header">
-              <div class="traversal-order-tag">LRN ORDER</div>
-              <h3 class="traversal-name">Postorder Traversal</h3>
-              <button class="copy-btn" data-copy-target="postorderOutput" title="Copy postorder sequence">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-              </button>
-            </div>
-            <div class="traversal-formula">Left Subtree &rarr; Right Subtree &rarr; Root</div>
-            <p class="traversal-explanation">
-              Visits all descendants before returning to the ancestor. Ideal for genealogical inheritance resolution and bottom-up memory deallocation.
-            </p>
-            <div class="traversal-stream" id="postorderOutput">
-              <span class="stream-placeholder">Awaiting tree construction...</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ================= 4. ARCHIVE SECTION ================= -->
-    <section id="archive-section" class="archival-card" aria-labelledby="heading-archive">
-      <div class="card-header">
-        <div class="badge-index">SECTION 04</div>
-        <div class="card-titles">
-          <h2 id="heading-archive" class="card-title">Preservation Vault & Serialization</h2>
-          <p class="card-subtitle">Encapsulate the active binary tree into a tamper-evident archival manuscript text</p>
-        </div>
-        <div class="card-accession-tag">ENCRYPTION & FORMAT: PREORDER-NULL-DELIMITED</div>
-      </div>
-
-      <div class="card-body">
-        <div class="archive-split-grid">
-          <!-- Serialization Preview -->
-          <div class="vault-preview-box">
-            <div class="vault-box-header">
-              <span class="vault-label">SERIALIZED ARCHIVE PREVIEW</span>
-              <span class="vault-format-tag">FORMAT: ISO-TXT-PREORDER</span>
-            </div>
-            
-            <div class="serialized-display" id="serializedTextPreview">
-              <span class="stream-placeholder">Click &ldquo;Serialize Current Tree&rdquo; to generate preservation text...</span>
-            </div>
-
-            <!-- Vault Details Bar -->
-            <div class="vault-meta-row">
-              <div class="meta-tag">
-                <span class="tag-label">STREAM LENGTH:</span>
-                <span class="tag-val" id="vaultStreamLength">0 chars</span>
-              </div>
-              <div class="meta-tag">
-                <span class="tag-label">TOKEN COUNT:</span>
-                <span class="tag-val" id="vaultTokenCount">0 tokens</span>
-              </div>
-              <div class="meta-tag">
-                <span class="tag-label">HASH CHECKSUM:</span>
-                <span class="tag-val mono" id="vaultChecksum">None</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Archival Export Controls -->
-          <div class="vault-controls-box">
-            <div class="control-group">
-              <label for="archiveFilenameInput" class="input-label">ARCHIVE MANUSCRIPT FILENAME</label>
-              <div class="input-with-extension">
-                <input 
-                  type="text" 
-                  id="archiveFilenameInput" 
-                  class="text-input" 
-                  value="vanishing_family_tree_archive" 
-                  placeholder="filename"
-                  spellcheck="false"
-                >
-                <span class="extension-label">.txt</span>
-              </div>
-            </div>
-
-            <div class="vault-actions-stack">
-              <button class="btn btn-primary btn-block" id="serializeTreeBtn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                <span>Serialize Active Tree</span>
-              </button>
-
-              <button class="btn btn-gold btn-block" id="downloadArchiveBtn" disabled>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-                <span>Download Archive File (.txt)</span>
-              </button>
-
-              <button class="btn btn-secondary btn-block" id="copyArchiveBtn" disabled>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                <span>Copy Serialized Text</span>
-              </button>
-            </div>
-
-            <div class="archival-guarantee">
-              <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold-dark)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              <span>Lossless Guarantee: Binary tree structure with missing branch invariants fully intact.</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ================= 5. RECOVERY SECTION ================= -->
-    <section id="recovery-section" class="archival-card" aria-labelledby="heading-recovery">
-      <div class="card-header">
-        <div class="badge-index">SECTION 05</div>
-        <div class="card-titles">
-          <h2 id="heading-recovery" class="card-title">Restoration Workshop & Reconstruction</h2>
-          <p class="card-subtitle">Upload or paste an archived manuscript file to reconstruct the vanished family tree</p>
-        </div>
-        <div class="card-accession-tag">LAB: SPECIMEN-RECONSTRUCT</div>
-      </div>
-
-      <div class="card-body">
-        <div class="recovery-split-grid">
-          <!-- Dropzone and Manual Text Area -->
-          <div class="recovery-input-side">
-            <!-- File Upload Dropzone -->
-            <div class="archival-dropzone" id="archiveDropzone">
-              <input type="file" id="archiveFileInput" accept=".txt" class="dropzone-file-input">
-              <div class="dropzone-content">
-                <div class="dropzone-icon">
-                  <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M8 36V40A4 4 0 0 0 12 44H36A4 4 0 0 0 40 40V36M16 20L24 12M24 12L32 20M24 12V34" stroke="var(--gold-dark)"/>
-                  </svg>
-                </div>
-                <div class="dropzone-text">
-                  <strong>Select or Drag & Drop Archival Manuscript (.txt)</strong>
-                  <span>Supports authenticated archive text files containing preorder tokens</span>
-                </div>
-                <span class="btn btn-outline btn-sm">Browse Local Files</span>
-              </div>
-              <div class="dropzone-file-info hidden" id="dropzoneFileInfo">
-                <span class="uploaded-filename" id="uploadedFileName">manuscript.txt</span>
-                <span class="uploaded-filesize" id="uploadedFileSize">128 bytes</span>
-                <button class="btn-clear-inline" id="removeFileBtn" title="Remove file">&times;</button>
-              </div>
-            </div>
-
-            <!-- Manual Pasting Alternative -->
-            <div class="manual-paste-box">
-              <div class="manual-paste-header">
-                <label for="recoveryTextInput" class="input-label">OR INSCRIBE RECOVERED TEXT DIRECTLY</label>
-                <button class="btn-link" id="pasteSerializedBtn">Paste from Vault</button>
-              </div>
-              <textarea 
-                id="recoveryTextInput" 
-                class="token-textarea monospace" 
-                rows="3" 
-                placeholder="Paste archive stream tokens here, e.g. A B # D # # C # #"
-                spellcheck="false"
-              ></textarea>
-            </div>
-
-            <!-- Restore Action Button -->
-            <div class="restore-action-bar">
-              <button class="btn btn-gold btn-lg btn-block" id="restoreTreeBtn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
-                <span class="btn-text">Execute Tree Reconstruction</span>
-                <span class="spinner hidden" id="restoreSpinner"></span>
-              </button>
-            </div>
-
-            <!-- Restoration Status Message -->
-            <div class="restoration-status-banner hidden" id="restorationStatusBanner">
-              <div class="status-banner-icon" id="restorationStatusIcon"></div>
-              <div class="status-banner-body">
-                <h4 class="status-banner-title" id="restorationStatusTitle">Reconstruction Complete</h4>
-                <p class="status-banner-desc" id="restorationStatusDesc">Binary tree parsed and reconstructed faithfully by C backend engine.</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Restored Tree Preview -->
-          <div class="recovery-preview-side">
-            <div class="restored-canvas-header">
-              <span class="canvas-header-title">RESTORED SPECIMEN VIEWPORT</span>
-              <span class="restored-status-pill" id="restoredPill">Awaiting Restoration</span>
-            </div>
-
-            <div class="restored-canvas-frame" id="restoredCanvasFrame">
-              <div class="canvas-empty-state" id="restoredEmptyState">
-                <svg class="empty-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
-                  <path d="M24 6L6 24h9v18h18V24h9L24 6z" stroke="var(--ink-light)" stroke-dasharray="2 2"/>
-                </svg>
-                <h4 class="empty-title">Restored Specimen Not Yet Loaded</h4>
-                <p class="empty-desc">Supply an archive file or tokens on the left and trigger reconstruction.</p>
-              </div>
-
-              <svg id="restoredTreeSvg" class="tree-svg" preserveAspectRatio="xMidYMid meet">
-                <g id="restoredPanGroup" transform="translate(0, 0) scale(1)">
-                  <g id="restoredLinksLayer"></g>
-                  <g id="restoredNodesLayer"></g>
-                </g>
-              </svg>
-            </div>
-
-            <!-- Restored Traversals Mini Readout -->
-            <div class="restored-traversals-bar">
-              <div class="mini-traversal">
-                <span class="mini-label">Restored Preorder:</span>
-                <span class="mini-val mono" id="restoredPreorderVal">&mdash;</span>
-              </div>
-              <div class="mini-traversal">
-                <span class="mini-label">Restored Inorder:</span>
-                <span class="mini-val mono" id="restoredInorderVal">&mdash;</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ================= 6. COMPARISON SECTION ================= -->
-    <section id="comparison-section" class="archival-card" aria-labelledby="heading-comparison">
-      <div class="card-header">
-        <div class="badge-index">SECTION 06</div>
-        <div class="card-titles">
-          <h2 id="heading-comparison" class="card-title">Forensic Audit & Lineage Verification</h2>
-          <p class="card-subtitle">Rigorous round-trip comparison between original accession and recovered specimen</p>
-        </div>
-        <div class="card-accession-tag">CERTIFICATE: #AUDIT-884</div>
-      </div>
-
-      <div class="card-body">
-        <!-- Verification Grand Seal / Verdict Banner -->
-        <div class="audit-verdict-banner neutral" id="auditVerdictBanner">
-          <div class="verdict-seal-container">
-            <div class="wax-seal" id="waxSeal">
-              <div class="seal-inner">
-                <svg class="seal-crest" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M16 3L4 9v7c0 7 5 13 12 13s12-6 12-13V9l-12-6z"/>
-                  <path d="M11 16l3.5 3.5L21 12" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span class="seal-text">CURATOR'S SEAL</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="verdict-statement">
-            <div class="verdict-kicker" id="verdictKicker">VERIFICATION STATUS</div>
-            <h3 class="verdict-headline" id="verdictHeadline">Awaiting Reconstruction For Audit</h3>
-            <p class="verdict-subtext" id="verdictSubtext">
-              Construct an initial tree in Section 01, serialize it, and reconstruct it in Section 05 to initiate deep forensic comparison.
-            </p>
-          </div>
-
-          <div class="verdict-actions">
-            <button class="btn btn-outline btn-sm" id="runComparisonAuditBtn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-              Re-Audit Invariants
+            <button id="restoreArchiveBtn" class="btn btn-primary">
+              <span class="btn-icon">✨</span> Restore Tree from Archive
             </button>
           </div>
-        </div>
 
-        <!-- Comparative Metrics Table -->
-        <div class="audit-table-wrapper">
-          <table class="audit-table" aria-label="Lineage Comparison Audit Table">
-            <thead>
-              <tr>
-                <th scope="col">Archival Invariant</th>
-                <th scope="col">Original Specimen</th>
-                <th scope="col">Restored Specimen</th>
-                <th scope="col">Discrepancy / Delta</th>
-                <th scope="col">Verdict</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>Preorder Sequence (Tokens)</strong></td>
-                <td><code class="audit-code" id="auditOrigPreorder">&mdash;</code></td>
-                <td><code class="audit-code" id="auditRestPreorder">&mdash;</code></td>
-                <td><span class="diff-highlight" id="auditDiffPreorder">Identical</span></td>
-                <td><span class="badge-audit pending" id="auditBadgePreorder">Pending</span></td>
-              </tr>
-              <tr>
-                <td><strong>Inorder Sequence (Tokens)</strong></td>
-                <td><code class="audit-code" id="auditOrigInorder">&mdash;</code></td>
-                <td><code class="audit-code" id="auditRestInorder">&mdash;</code></td>
-                <td><span class="diff-highlight" id="auditDiffInorder">Identical</span></td>
-                <td><span class="badge-audit pending" id="auditBadgeInorder">Pending</span></td>
-              </tr>
-              <tr>
-                <td><strong>Active Node Count</strong></td>
-                <td><span id="auditOrigNodes">&mdash;</span></td>
-                <td><span id="auditRestNodes">&mdash;</span></td>
-                <td><span id="auditDiffNodes">0</span></td>
-                <td><span class="badge-audit pending" id="auditBadgeNodes">Pending</span></td>
-              </tr>
-              <tr>
-                <td><strong>Tree Depth / Generations</strong></td>
-                <td><span id="auditOrigHeight">&mdash;</span></td>
-                <td><span id="auditRestHeight">&mdash;</span></td>
-                <td><span id="auditDiffHeight">0</span></td>
-                <td><span class="badge-audit pending" id="auditBadgeHeight">Pending</span></td>
-              </tr>
-              <tr>
-                <td><strong>Missing Branch Invariants (#)</strong></td>
-                <td><span id="auditOrigNulls">&mdash;</span></td>
-                <td><span id="auditRestNulls">&mdash;</span></td>
-                <td><span id="auditDiffNulls">0</span></td>
-                <td><span class="badge-audit pending" id="auditBadgeNulls">Pending</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- ================= 7. DAMAGED ARCHIVE TESTING ================= -->
-    <section id="damage-testing-section" class="archival-card" aria-labelledby="heading-damaged">
-      <div class="card-header">
-        <div class="badge-index">SECTION 07</div>
-        <div class="card-titles">
-          <h2 id="heading-damaged" class="card-title">Damaged Archive Chamber & Tampering Defense</h2>
-          <p class="card-subtitle">Stress test backend validation: Demonstrate robust rejection of truncated or corrupted manuscripts</p>
-        </div>
-        <div class="card-accession-tag">LAB: VULNERABILITY-TEST</div>
-      </div>
-
-      <div class="card-body">
-        <div class="stress-layout-grid">
-          <!-- Input Side -->
-          <div class="stress-input-side">
-            <div class="input-group">
-              <div class="stress-header-row">
-                <label for="damagedArchiveInput" class="input-label">DAMAGED OR INCOMPLETE ARCHIVE STREAM</label>
-                <span class="stress-alert-badge">STRESS HARNESS</span>
-              </div>
-              <div class="scanner-field-wrapper">
-                <div class="laser-scanner-line hidden" id="laserScanner"></div>
-                <textarea 
-                  id="damagedArchiveInput" 
-                  class="token-textarea monospace error-tint" 
-                  rows="3" 
-                  placeholder="Inscribe incomplete preorder tokens, e.g. A B #"
-                  spellcheck="false"
-                >A B #</textarea>
-              </div>
+          <!-- Diagnostic Result Box -->
+          <div class="diagnostic-card hidden" id="diagnosticCard">
+            <div class="diagnostic-header" id="diagnosticHeader">
+              <span class="status-indicator" id="diagnosticIcon">✓</span>
+              <span class="diagnostic-title" id="diagnosticTitle">VALID ARCHIVE</span>
             </div>
-
-            <!-- Quick Damaged Specimen Buttons -->
-            <div class="damaged-presets">
-              <span class="preset-label">INJECT KNOWN DEFECT:</span>
-              <div class="preset-buttons">
-                <button class="btn btn-defect" data-defect="A B #" title="Node B expects two children but stream ends prematurely">
-                  <strong>Premature End:</strong> <code>A B #</code>
-                </button>
-                <button class="btn btn-defect" data-defect="A B # # C" title="Node C is missing terminating markers">
-                  <strong>Missing Right Leaf:</strong> <code>A B # # C</code>
-                </button>
-                <button class="btn btn-defect" data-defect="A B # # # #" title="Too many null leaves for tree structure">
-                  <strong>Excess Nulls:</strong> <code>A B # # # #</code>
-                </button>
-                <button class="btn btn-defect" data-defect="A % ^ # @" title="Unrecognized heraldic glyphs">
-                  <strong>Invalid Glyphs:</strong> <code>A % ^ # @</code>
-                </button>
-                <button class="btn btn-defect" data-defect="   " title="Empty manuscript scroll">
-                  <strong>Empty Scroll:</strong> <code>[whitespace]</code>
-                </button>
-              </div>
-            </div>
-
-            <div class="stress-actions">
-              <button class="btn btn-danger btn-block" id="testDamagedBtn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                <span>Test & Validate Damaged Archive Against Backend</span>
-                <span class="spinner hidden" id="damageSpinner"></span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Diagnostic Rejection Report Side -->
-          <div class="stress-report-side">
-            <div class="report-box" id="damageReportBox">
-              <div class="report-header">
-                <span class="report-tag">FORENSIC DIAGNOSIS</span>
-                <span class="report-status-badge neutral" id="damageStatusBadge">Awaiting Test</span>
-              </div>
-
-              <div class="report-content" id="damageReportContent">
-                <div class="diagnosis-lead">
-                  <svg class="lead-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg>
-                  <strong id="diagnosisTitle">Ready for Stress Injection</strong>
-                </div>
-                <p id="diagnosisDesc">
-                  Click <em>"Test & Validate Damaged Archive"</em> to transmit malformed tokens to the C recovery engine. The backend will parse the stream, detect structural or token invariant violations, and return an explicit rejection diagnosis.
-                </p>
-                <div class="rejection-details-container hidden" id="rejectionDetailsBox">
-                  <div class="detail-label">BACKEND REJECTION LOG:</div>
-                  <pre class="rejection-log" id="rejectionLogText"></pre>
-                </div>
-              </div>
+            <div class="diagnostic-body">
+              <p id="diagnosticMessage">Structure verified.</p>
+              <div class="diagnostic-stats" id="diagnosticStats"></div>
             </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
+      <!-- Panel 5: Lineage Forensic Comparison & Round-trip Proof -->
+      <section class="panel forensics-panel">
+        <div class="panel-header">
+          <span class="panel-icon">⚖️</span>
+          <h2>5. Tree Isomorphism & Comparison Engine</h2>
+        </div>
+        <div class="panel-body">
+          <p class="section-desc">
+            Verify whether the restored dynastic tree matches the original historical record with mathematical exactness across all traversals and node linkages.
+          </p>
+
+          <div class="btn-group">
+            <button id="compareTreesBtn" class="btn btn-gold">
+              <span class="btn-icon">⚖️</span> Run Isomorphism Verification
+            </button>
+            <button id="runRoundtripDemoBtn" class="btn btn-secondary">
+              <span class="btn-icon">🔄</span> Execute Full Round-Trip Proof
+            </button>
+          </div>
+
+          <!-- Comparison Results Table -->
+          <div class="comparison-card hidden" id="comparisonCard">
+            <div class="comparison-header" id="comparisonHeader">
+              <span class="comp-icon" id="compIcon">✓</span>
+              <span class="comp-result-text" id="compResultText">TREES ARE IDENTICAL (ISOMORPHIC)</span>
+            </div>
+            <div class="comparison-body">
+              <table class="forensic-table">
+                <thead>
+                  <tr>
+                    <th>Verification Property</th>
+                    <th>Original Tree</th>
+                    <th>Restored Tree</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Structural Topology</strong></td>
+                    <td id="compOrigNodes">-</td>
+                    <td id="compRestNodes">-</td>
+                    <td id="compStructStatus"><span class="badge badge-pass">MATCH</span></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Preorder Traversal</strong></td>
+                    <td id="compOrigPre">-</td>
+                    <td id="compRestPre">-</td>
+                    <td id="compPreStatus"><span class="badge badge-pass">MATCH</span></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Inorder Traversal</strong></td>
+                    <td id="compOrigIn">-</td>
+                    <td id="compRestIn">-</td>
+                    <td id="compInStatus"><span class="badge badge-pass">MATCH</span></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Postorder Traversal</strong></td>
+                    <td id="compOrigPost">-</td>
+                    <td id="compRestPost">-</td>
+                    <td id="compPostStatus"><span class="badge badge-pass">MATCH</span></td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div class="recovery-badge-container">
+                <span class="recovery-stamp" id="recoveryStamp">SEAL OF PRESERVATION: 100% LOSSLESS RECOVERY</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notification Toast Box -->
+          <div id="toastNotification" class="toast hidden"></div>
+
+        </div>
+      </section>
+
+    </div>
   </main>
 
-  <!-- ================= FOOTER ================= -->
-  <footer class="museum-footer" role="contentinfo">
-    <div class="footer-inner">
-      <div class="footer-col">
-        <div class="footer-title">THE MUSEUM'S VANISHING FAMILY TREES</div>
-        <p class="footer-desc">
-          College Data Structures & Algorithms Collaborative Project &bull; Team Member 3 (Frontend UI & Interactive Visualization).
-          Engineered to demonstrate preorder serialization invariants and flawless tree restoration from vanishing records.
-        </p>
-      </div>
-      <div class="footer-col">
-        <div class="footer-title">SYSTEM ARCHITECTURE</div>
-        <ul class="footer-links">
-          <li><strong>Frontend:</strong> HTML5, Responsive CSS3, Vanilla JavaScript, Interactive SVG Engine</li>
-          <li><strong>Middleware:</strong> Python Flask REST API (Member 4)</li>
-          <li><strong>Core Engine:</strong> C Binary Tree Serialization & Recovery Algorithms (Members 1 & 2)</li>
-        </ul>
-      </div>
-      <div class="footer-col">
-        <div class="footer-title">CURATORIAL PROTOCOL</div>
-        <p class="footer-desc">
-          Complies with the formal preorder null-terminated specification. Missing children must be unambiguously preserved with the <code>#</code> sentinel.
-        </p>
-      </div>
-    </div>
-    <div class="footer-bottom">
-      &copy; 2026 The Museum Conservancy Lineage Project. Built for College DSA Exhibition & Presentation.
+  <!-- Footer -->
+  <footer class="museum-footer">
+    <div class="footer-content">
+      <p>Data Structures & Algorithms Course Project — <strong>"The Museum's Vanishing Family Trees"</strong></p>
+      <p class="team-credits">
+        Collaborative Architecture: Member 1 (C Binary Tree Core) • Member 2 (Archive & Recovery) • Member 3 (Web UI) • Member 4 (Flask Backend & Integration)
+      </p>
     </div>
   </footer>
 
-  <!-- ================= API CONFIGURATION MODAL ================= -->
-  <div class="modal-overlay hidden" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3 id="settingsModalTitle" class="modal-title">Archival Backend Connection Settings</h3>
-        <button class="modal-close-btn" id="closeSettingsBtn" aria-label="Close dialog">&times;</button>
-      </div>
-      <div class="modal-body">
-        <p class="modal-desc">
-          Configure the REST API endpoint provided by the Flask backend (Member 4). By default, it connects to <code>http://127.0.0.1:5000</code> or relative endpoints.
-        </p>
-        <div class="form-group">
-          <label for="apiBaseUrlInput" class="input-label">FLASK BACKEND BASE URL</label>
-          <input type="text" id="apiBaseUrlInput" class="text-input" value="http://127.0.0.1:5000" placeholder="e.g. http://127.0.0.1:5000">
-        </div>
-        <div class="settings-actions">
-          <button class="btn btn-secondary" id="testApiEndpointBtn">Test Ping</button>
-          <button class="btn btn-primary" id="saveApiSettingsBtn">Save & Apply</button>
-        </div>
-        <div class="endpoint-test-feedback hidden" id="endpointTestFeedback"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Toast Notification Container -->
-  <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
-
-  <!-- ================= FRONTEND JAVASCRIPT ENGINE ================= -->
   <script src="script.js"></script>
 </body>
 </html>
